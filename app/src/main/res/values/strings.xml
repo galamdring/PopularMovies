@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">PopularMovies</string>
+    <string name="sort_type">Sort Type</string>
+    <string name="release_date_label">Release Date</string>
+    <string name="average_rating_label">Average Rating</string>
+
+    <string-array name="sortTypes">
+        <item>Most Popular</item>
+        <item>Highest Rated</item>
+    </string-array>
+</resources>
