@@ -11,5 +11,6 @@ I followed the design patterns we learned in [Sunshine](https://github.com/udaci
 
 ## Getting Started
 In order to run this, you will need to get an APIKey from the Movie Database : www.tmdb.com
+
 Add it to the strings file as apiKey
 
