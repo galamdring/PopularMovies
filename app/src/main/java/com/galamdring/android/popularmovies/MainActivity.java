@@ -20,9 +20,13 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.galamdring.android.popularmovies.Data.MovieContract;
+import com.galamdring.android.popularmovies.Sync.AddFavoriteTask;
 import com.galamdring.android.popularmovies.Sync.MovieSyncTask;
+import com.galamdring.android.popularmovies.Sync.ReviewSyncTask;
+import com.galamdring.android.popularmovies.Sync.TrailerSyncTask;
 
 import java.lang.reflect.Array;
 
@@ -35,6 +39,8 @@ public class MainActivity extends AppCompatActivity implements
     private RecyclerView.LayoutManager moviesLayoutManager;
     private ProgressBar loadingIndicator;
     private final int LoaderId = 3145;
+
+    private Uri moviesUri = MovieContract.MovieEntry.MOVIES_CONTENT_URI;
 
 
 
@@ -63,8 +69,6 @@ public class MainActivity extends AppCompatActivity implements
         moviesRecyclerView.setAdapter(moviesAdapter);
         startSync();
 
-        ActionBar actionBar = getSupportActionBar();
-        String[] options = getResources().getStringArray(R.array.sortTypes);
 
 
     }
@@ -94,11 +98,7 @@ public class MainActivity extends AppCompatActivity implements
         this.startService(intentToStartSync);
     }
 
-    public void startSync(){
-        Intent intentToStartSync = new Intent(this, MovieSyncTask.class);
-        intentToStartSync.setAction("popular");
-        this.startService(intentToStartSync);
-    }
+    public void startSync(){syncPopular();}
 
     @NonNull
     @Override
@@ -106,11 +106,10 @@ public class MainActivity extends AppCompatActivity implements
         switch(id){
             case LoaderId:
 
-                Uri moviesUri = MovieContract.MovieEntry.MOVIES_CONTENT_URI;
-                String sortOrder = MovieContract.MovieEntry.COLUMN_POPULARITY;
+
                 return new CursorLoader(this, moviesUri,
-                        MovieContract.MovieEntry.MainActivitySelectColumns,
-                        null, null, sortOrder);
+                        MovieContract.MovieEntry.MovieSelectColumns,
+                        null, null, null);
             default:
                 throw new RuntimeException("These are not the droids you are looking for. (Loader not implemented.)"+id);
         }
@@ -121,7 +120,20 @@ public class MainActivity extends AppCompatActivity implements
         loadingIndicator.setVisibility(View.INVISIBLE);
         moviesAdapter.setData(data);
         moviesRecyclerView.setVisibility(View.VISIBLE);
+
+        for(int i=0;i<data.getCount(); i++){
+            data.moveToPosition(i);
+            int movieId=data.getInt(MovieContract.MovieEntry.INDEX_COLUMN_ID);
+            Intent intentReviewSync = new Intent(this, ReviewSyncTask.class);
+            intentReviewSync.putExtra("MovieId",movieId);
+            this.startService(intentReviewSync);
+            Intent intentTrailerSync = new Intent(this, TrailerSyncTask.class);
+            intentTrailerSync.putExtra("MovieId",movieId);
+            this.startService(intentTrailerSync);
+        }
+
     }
+
 
     @Override
     public void onLoaderReset(@NonNull Loader<Cursor> loader) {
@@ -137,20 +149,35 @@ public class MainActivity extends AppCompatActivity implements
         startActivity(movieDetailIntent);
     }
 
+    @Override
+    public void onFavoriteClick(boolean favorite, int id) {
+
+        Intent addFavoriteIntent = new Intent(this,AddFavoriteTask.class);
+        addFavoriteIntent.putExtra("id",id);
+        addFavoriteIntent.putExtra("favorite",favorite);
+        this.startService(addFavoriteIntent);
+    }
 
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         String[] options = getResources().getStringArray(R.array.sortTypes);
         String selected = options[position];
-        if(selected.equals("Most Popular")){
+        if(selected.equals(getString(R.string.mostPopularString))){
+            moviesUri = MovieContract.MovieEntry.MOVIES_CONTENT_URI;
             syncPopular();
+            getSupportLoaderManager().restartLoader(LoaderId,null, this);
         }
-        if(selected.equals("Highest Rated")){
+        if(selected.equals(getString(R.string.highestRatedString))){
+            moviesUri = MovieContract.MovieEntry.MOVIES_CONTENT_URI;
             syncHighRated();
+            getSupportLoaderManager().restartLoader(LoaderId,null, this);
+        }
+        if(selected.equals(getString(R.string.favoritesString))){
+            moviesUri = MovieContract.MovieEntry.FAVORITES_CONTENT_URI;
+            getSupportLoaderManager().restartLoader(LoaderId,null, this);
         }
     }
-
     @Override
     public void onNothingSelected(AdapterView<?> parent) {
         syncPopular();

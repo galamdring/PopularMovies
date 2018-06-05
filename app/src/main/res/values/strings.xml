@@ -3,9 +3,16 @@
     <string name="sort_type">Sort Type</string>
     <string name="release_date_label">Release Date</string>
     <string name="average_rating_label">Average Rating</string>
+    <string name="mostPopularString">Most Popular</string>
+    <string name="highestRatedString">Highest Rated</string>
+    <string name="favoritesString">Favorites</string>
 
     <string-array name="sortTypes">
-        <item>Most Popular</item>
-        <item>Highest Rated</item>
+        <item>@string/mostPopularString</item>
+        <item>@string/highestRatedString</item>
+        <item>@string/favoritesString</item>
     </string-array>
+
+    <string name="youtubeKey">youtubeKey</string>
+    <string name="targetHolder">targetHolder</string>
 </resources>
