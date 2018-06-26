@@ -1,6 +1,11 @@
 package com.galamdring.android.popularmovies;
 
+import com.galamdring.android.popularmovies.Data.DataConverter;
+
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -12,6 +17,9 @@ import static org.junit.Assert.*;
 public class ExampleUnitTest {
     @Test
     public void addition_isCorrect() {
+
         assertEquals(4, 2 + 2);
     }
+
+
 }

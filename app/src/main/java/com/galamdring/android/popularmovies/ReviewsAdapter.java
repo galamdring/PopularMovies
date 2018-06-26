@@ -1,12 +1,13 @@
 package com.galamdring.android.popularmovies;
 
-import android.app.Activity;
-import android.app.Application;
+import android.arch.lifecycle.LiveData;
+import android.arch.lifecycle.Observer;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,11 +15,14 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.galamdring.android.popularmovies.Data.MovieContract;
-import com.squareup.picasso.Picasso;
+import com.galamdring.android.popularmovies.Data.Review;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ReviewsAdapter extends RecyclerView.Adapter<ReviewsAdapter.ReviewsViewHolder> {
 
-    Cursor ReviewsCursor;
+    List<Review> ReviewsCursor;
     Context TheContext;
 
     public ReviewsAdapter(Context context ){
@@ -35,21 +39,21 @@ public class ReviewsAdapter extends RecyclerView.Adapter<ReviewsAdapter.ReviewsV
 
     @Override
     public void onBindViewHolder(@NonNull ReviewsViewHolder holder, int position) {
-        ReviewsCursor.moveToPosition(position);
-        holder.tv_content.setText(ReviewsCursor.getString(MovieContract.MovieEntry.INDEX_REVIEW_COLUMN_CONTENT));
-        holder.tv_author.setText(ReviewsCursor.getString(MovieContract.MovieEntry.INDEX_REVIEW_COLUMN_AUTHOR));
-        holder.tv_link.setTag(ReviewsCursor.getString(MovieContract.MovieEntry.INDEX_REVIEW_COLUMN_URL));
+        Review review = ReviewsCursor.get(position);
+        holder.tv_content.setText(review.getContent());
+        holder.tv_author.setText(review.getAuthor());
+        holder.tv_link.setTag(review.getReviewUrl());
     }
 
     @Override
     public int getItemCount() {
         if(ReviewsCursor!=null)
-        return ReviewsCursor.getCount();
+        return ReviewsCursor.size();
         else return 0;
     }
 
-    public void setData(Cursor data){
-        this.ReviewsCursor= data;
+    public void setData(List<Review> data){
+        ReviewsCursor = data;
         notifyDataSetChanged();
     }
 

@@ -34,7 +34,7 @@ public class JSONUtils {
             String data = null;
             if(moreData) data = scanner.next();
             scanner.close();
-            Log.d("getJSONObjectFromUrl","Got json data: "+data);
+            //Log.d("getJSONObjectFromUrl","Got json data: "+data);
             return new JSONObject(data);
 
         }

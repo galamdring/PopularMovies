@@ -19,9 +19,11 @@ import com.galamdring.android.popularmovies.Utils.TrailerUtils;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
+import java.util.ArrayList;
+
 public class TrailerAdapter extends RecyclerView.Adapter<TrailerAdapter.TrailerViewHolder> {
 
-    Cursor TrailerCursor;
+    ArrayList<String> TrailerCursor;
     Context TheContext;
 
     public TrailerAdapter(Context context) {
@@ -38,8 +40,7 @@ public class TrailerAdapter extends RecyclerView.Adapter<TrailerAdapter.TrailerV
 
     @Override
     public void onBindViewHolder(@NonNull TrailerViewHolder holder, int position) {
-        TrailerCursor.moveToPosition(position);
-        String youtubeKey = TrailerCursor.getString(MovieContract.MovieEntry.INDEX_TRAILER_COLUMN_KEY);
+        String youtubeKey = TrailerCursor.get(position);
         holder.thumbnail.setTag(R.string.youtubeKey,youtubeKey);
         final ImageView thumbnail = holder.thumbnail;
         final Target target = new Target() {
@@ -66,12 +67,13 @@ public class TrailerAdapter extends RecyclerView.Adapter<TrailerAdapter.TrailerV
     @Override
     public int getItemCount() {
         if(TrailerCursor==null) return 0;
-        return TrailerCursor.getCount();
+        return TrailerCursor.size();
     }
 
-    public void setData(Cursor data){
+    public void setData(ArrayList<String> data){
         TrailerCursor = data;
-        if(data==null || getItemCount()==0){
+        //This will also check if it is null, because we return 0 if the list is null.
+        if(getItemCount()==0){
             Toast.makeText(TheContext, "No trailer data found for this movie.", Toast.LENGTH_SHORT).show();
         }
         else{

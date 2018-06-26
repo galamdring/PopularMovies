@@ -7,10 +7,18 @@ import android.net.Uri;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.galamdring.android.popularmovies.Data.Favorite;
+import com.galamdring.android.popularmovies.Data.FavoriteReview;
 import com.galamdring.android.popularmovies.Data.Genres;
+import com.galamdring.android.popularmovies.Data.Movie;
+import com.galamdring.android.popularmovies.Data.MovieDao;
+import com.galamdring.android.popularmovies.Data.Review;
 import com.galamdring.android.popularmovies.Data.MovieContract;
+import com.galamdring.android.popularmovies.Data.MovieDatabase;
+import com.galamdring.android.popularmovies.Data.ReviewDao;
 import com.galamdring.android.popularmovies.R;
 import com.galamdring.android.popularmovies.Utils.JSONUtils;
+import com.galamdring.android.popularmovies.Utils.StringUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,55 +28,66 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class MoviesApi {
     static String API_KEY;
     static final String BASE_URL = "http://api.themoviedb.org/3/movie";
     static final String REVIEW_URL = "reviews";
     static final String TRAILER_URL="videos";
 
+
     synchronized public static void addFavorite(Context context, int id){
+        MovieDatabase db = MovieDatabase.getInstance(context);
         Toast.makeText(context, "Adding favorite flag to movie: "+id, Toast.LENGTH_SHORT).show();
-        ContentResolver movieResolver = context.getContentResolver();
-        ContentValues movie = new ContentValues();
-        movie.put(MovieContract.MovieEntry._ID,id);
-        movie.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 1);
-        Uri favoriteUri = MovieContract.MovieEntry.GetContentUriForFavorite(id);
-        String selection = MovieContract.MovieEntry._ID+" = ? ";
-        String[] selectionArgs = new String[]{Integer.toString(id)};
-        movieResolver.update(favoriteUri,movie,selection,selectionArgs);
-        movieResolver.insert(favoriteUri,movie);
+        Movie movie = db.movieDao().getMovie(id).getValue();
+        if(movie!=null) {
+            movie.setFavorite(true);
+            movie.setReviews(db.reviewDao().getMovieReviews(id).getValue());
+            Favorite favorite = new Favorite(movie);
+            db.favoriteDao().insertWithReviews(favorite, FavoriteReview.FavoriteReviewListFromListReview(movie.getReviews()));
+        }
+        else{Log.d("addFavoriteMovieApi","Couldn't load movie.");}
     }
 
     public static void removeFavorite(Context context, int id) {
         Toast.makeText(context, "Removing favorite flag from movie: "+id, Toast.LENGTH_SHORT).show();
-        ContentResolver movieResolver = context.getContentResolver();
-        ContentValues movie = new ContentValues();
-        movie.put(MovieContract.MovieEntry._ID,id);
-        movie.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 0);
-        Uri favoriteUri = MovieContract.MovieEntry.GetContentUriForFavorite(id);
-        String selection = MovieContract.MovieEntry._ID+" = ? ";
-        String[] selectionArgs = new String[]{Integer.toString(id)};
-        movieResolver.update(favoriteUri,movie,selection,selectionArgs);
-        movieResolver.delete(favoriteUri,selection,selectionArgs);
+        MovieDatabase db = MovieDatabase.getInstance(context);
+        Movie movie = db.movieDao().getMovie(id).getValue();
+        if(movie!=null) {
+            movie.setFavorite(false);
+            db.movieDao().update(movie);
+            Favorite favorite = db.favoriteDao().getFavorite(id);
+            List<FavoriteReview> reviews = db.favoriteDao().getFavoriteReviews(id).getValue();
+            if(reviews!=null){
+                db.favoriteDao().delete(reviews);
+            }
+            if(favorite!=null){
+                db.favoriteDao().delete(favorite);
+            }
+        }
     }
 
     synchronized public static void syncMovies(Context context, String sortType){
         try {
-            ContentValues[] movieValues = getMovieContextValues(context, sortType);
-            if (movieValues != null && movieValues.length != 0) {
-                ContentResolver movieResolver = context.getContentResolver();
-                //Delete all the other data, we are starting fresh.
-                movieResolver.delete(MovieContract.MovieEntry.MOVIES_CONTENT_URI, null, null);
-                //bulkinsert all the new data. This will be the first 20 records.
-                movieResolver.bulkInsert(MovieContract.MovieEntry.MOVIES_CONTENT_URI, movieValues);
-
+            ArrayList<Movie> movieValues = getMovieContextValues(context, sortType);
+            if (movieValues != null && movieValues.size() != 0) {
+                MovieDatabase database = MovieDatabase.getInstance(context);
+                MovieDao mdao = database.movieDao();
+                ReviewDao rdao = database.reviewDao();
+                mdao.deleteAll();
+                rdao.deleteAll();
+                for(Movie movie :movieValues){
+                    rdao.insert(movie.getReviews());
+                }
+                long[] ids = mdao.bulkInsert(movieValues);
+                Log.d("MoviesApi","inserted "+ids.length+" movies.");
             }
         }
         catch(Exception e){
             Log.e("syncMovies","Failed to load movies from tmdb",e);
         }
     }
-    public static ContentValues[] getMovieContextValues(Context context, String sortType){
+    public static ArrayList<Movie> getMovieContextValues(Context context, String sortType){
 
         API_KEY=context.getResources().getString(R.string.apiKey);
         if(sortType==null) sortType = "popular";
@@ -83,7 +102,7 @@ public class MoviesApi {
             Log.d("MoviesApi", response.toString());
             JSONArray results = response.getJSONArray("results");
             Log.d("MoviesApi", "Got " + results.length() + " results.");
-            ContentValues[] movieContentValues = new ContentValues[results.length()];
+            ArrayList<Movie> movies = new ArrayList<>();
             for (int i = 0; i < results.length(); i++) {
                 JSONObject result = results.getJSONObject(i);
                 String posterPath = result.getString("poster_path");
@@ -108,26 +127,15 @@ public class MoviesApi {
                 int voteCount = result.getInt("vote_count");
                 String title = result.getString("title");
 
-                PopulateReviews(context,id);
-                PopulateTrailers(context,id);
+                ArrayList<String> trailerIds = PopulateTrailers(id);
+                Log.d(MoviesApi.class.getSimpleName(),String.format("Got %s as trailer ids.", StringUtils.ListToStringJoin(trailerIds,", ")));
+                List<Review> reviews = PopulateReviews(id);
 
-
-                ContentValues movieContentValue = new ContentValues();
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_BACKDROP_URL, backdropUrl);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_GENRE_IDS, genreSB.toString());
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_ORIGINAL_LANG, originalLang);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_ORIGINAL_TITLE, orig_title);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_OVERVIEW, overview);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_POPULARITY, popularity);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_POSTER_URL, posterUrl);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_RELEASE_DATE, relDate);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_TITLE, title);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_VOTE_AVERAGE, voteAvg);
-                movieContentValue.put(MovieContract.MovieEntry.COLUMN_VOTE_COUNT, voteCount);
-                movieContentValue.put(MovieContract.MovieEntry._ID, id);
-                movieContentValues[i] = movieContentValue;
+                Movie movie = new Movie(title,posterUrl,id,voteCount,relDate,voteAvg,popularity,orig_title,backdropUrl,genreSB.toString(),originalLang,overview,trailerIds);
+                movie.setReviews(reviews);
+                movies.add(movie);
             }
-            return movieContentValues;
+            return movies;
         }
         catch(IOException ex){
             Toast.makeText(context, "Looks like we can't connect. Is your network on?", Toast.LENGTH_SHORT).show();
@@ -140,46 +148,29 @@ public class MoviesApi {
         return null;
     }
 
-    public static void PopulateTrailers(Context context,int MovieID) {
-        Uri trailerUri = Uri.parse(BASE_URL).buildUpon().appendPath(Integer.toString(MovieID)).appendPath(TRAILER_URL).appendQueryParameter("api_key",API_KEY).build();
+    public static ArrayList<String> PopulateTrailers(int MovieID) {
+        Uri trailerUri = Uri.parse(BASE_URL).buildUpon().appendPath(Integer.toString(MovieID)).appendPath(TRAILER_URL).appendQueryParameter("api_key", API_KEY).build();
+        ArrayList<String> trailerIds = new ArrayList<>();
         try {
             JSONObject trailerJSON = JSONUtils.getJSONObjectFromUrl(trailerUri.toString());
 
             JSONArray results = trailerJSON.getJSONArray("results");
-            ContentValues[] data = new ContentValues[results.length()];
-            for(int i=0;i<results.length(); i++) {
-                ContentValues trailerValues = new ContentValues();
+
+            for (int i = 0; i < results.length(); i++) {
                 JSONObject result = results.getJSONObject(i);
-                String name = result.getString("name");
-                String key = result.getString("key");
                 String site = result.getString("site");
-                String type = result.getString("type");
-                String trailer_id = result.getString("id");
-                trailerValues.put(MovieContract.MovieEntry.COLUMN_TRAILER_NAME, name);
-                trailerValues.put(MovieContract.MovieEntry.COLUMN_TRAILER_KEY, key);
-                trailerValues.put(MovieContract.MovieEntry.COLUMN_TRAILER_SITE, site);
-                trailerValues.put(MovieContract.MovieEntry.COLUMN_TRAILER_TYPE, type);
-                trailerValues.put(MovieContract.MovieEntry.COLUMN_TRAILER_MOVIE_ID, MovieID);
-                trailerValues.put(MovieContract.MovieEntry.COLUMN_TRAILER_ID, trailer_id);
-
-                data[i]=trailerValues;
+                String youtubeKey = result.getString("key");
+                if (site.equals("YouTube")) {
+                    trailerIds.add(youtubeKey);
+                }
             }
-
-            if(data.length>0){
-                ContentResolver movieResolver = context.getContentResolver();
-                //movieResolver.delete(MovieContract.MovieEntry.TRAILERS_CONTENT_URI, null, null);
-                //bulkinsert all the new data. This will be the first 20 records.
-                movieResolver.bulkInsert(MovieContract.MovieEntry.TRAILERS_CONTENT_URI, data);
-
-            }
+        } catch (Exception ex) {
+            Log.e("PopulateTrailers", "Failed to get JSON for trailers.", ex);
         }
-        catch(Exception ex){
-            Log.e("PopulateTrailers","Failed to get JSON for trailers.",ex);
-        }
-
+        return trailerIds;
     }
 
-    public static void PopulateReviews(Context context, int MovieID){
+    public static ArrayList<Review> PopulateReviews(int MovieID){
         /*
         {"id":337167,"page":1,"results":[
         {"author":"ehabsalah",
@@ -188,40 +179,27 @@ public class MoviesApi {
         "url":"https://www.themoviedb.org/review/5ace51a9c3a36834de09f933"}],"total_pages":1,"total_results":1}
          */
         Uri reviewUri = Uri.parse(BASE_URL).buildUpon().appendPath(Integer.toString(MovieID)).appendPath(REVIEW_URL).appendQueryParameter("api_key",API_KEY).build();
+        ArrayList<Review> reviews = new ArrayList<>();
         try {
             JSONObject reviewJSON = JSONUtils.getJSONObjectFromUrl(reviewUri.toString());
 
             JSONArray results = reviewJSON.getJSONArray("results");
-            ContentValues[] data = new ContentValues[results.length()];
+
             for(int i=0;i<results.length(); i++) {
-                ContentValues reviewValues = new ContentValues();
                 JSONObject result = results.getJSONObject(i);
                 String author = result.getString("author");
                 String content = result.getString("content");
                 String url = result.getString("url");
                 String review_id = result.getString("id");
-                reviewValues.put(MovieContract.MovieEntry.COLUMN_REVIEW_MOVIE_ID, MovieID);
-                reviewValues.put(MovieContract.MovieEntry.COLUMN_REVIEW_AUTHOR, author);
-                reviewValues.put(MovieContract.MovieEntry.COLUMN_REVIEW_CONTENT, content);
-                reviewValues.put(MovieContract.MovieEntry.COLUMN_REVIEW_URL, url);
-                reviewValues.put(MovieContract.MovieEntry.COLUMN_REVIEW_ID, review_id);
-
-
-
-                data[i]=reviewValues;
-            }
-
-            if(data.length>0){
-                ContentResolver movieResolver = context.getContentResolver();
-                //movieResolver.delete(MovieContract.MovieEntry.REVIEWS_CONTENT_URI, null, null);
-                //bulkinsert all the new data. This will be the first 20 records.
-                movieResolver.bulkInsert(MovieContract.MovieEntry.REVIEWS_CONTENT_URI, data);
-
+                Review review = new Review(review_id,author,content,MovieID, url );
+                reviews.add(review);
             }
         }
         catch(Exception ex){
             Log.e("PopulateTrailers","Failed to get JSON for trailers.",ex);
         }
+
+        return reviews;
     }
 
 }
