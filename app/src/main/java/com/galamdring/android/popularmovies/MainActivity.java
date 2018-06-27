@@ -3,6 +3,7 @@ package com.galamdring.android.popularmovies;
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -23,8 +24,9 @@ import com.galamdring.android.popularmovies.Data.FavoriteReview;
 import com.galamdring.android.popularmovies.Data.Movie;
 import com.galamdring.android.popularmovies.Data.MovieContract;
 import com.galamdring.android.popularmovies.Data.MovieViewModel;
-import com.galamdring.android.popularmovies.Sync.AddFavoriteTask;
+import com.galamdring.android.popularmovies.Data.OurExecutors;
 import com.galamdring.android.popularmovies.Sync.MovieSyncTask;
+import com.galamdring.android.popularmovies.Sync.MoviesApi;
 
 import java.util.List;
 
@@ -46,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        moviesRecyclerView = (RecyclerView) findViewById(R.id.moviesRecyclerView);
+        moviesRecyclerView = findViewById(R.id.moviesRecyclerView);
         moviesRecyclerView.setHasFixedSize(true);
 
         moviesLayoutManager = new GridLayoutManager(this,2);
@@ -100,10 +102,17 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void syncPopular() {
-        Intent intentToStartSync = new Intent(this, MovieSyncTask.class);
-        intentToStartSync.setAction("popular");
-        this.startService(intentToStartSync);
-        if(movieData!=null && movieData.hasObservers()) movieData.removeObservers(this);
+        final Context context = this;
+        moviesAdapter.setData(null);
+        OurExecutors.getINSTANCE().getNetworkIO().execute(new Runnable() {
+            @Override
+            public void run() {
+                MoviesApi.syncMovies(context, "popular");
+            }
+        });
+        if (movieData != null && movieData.hasObservers()) {
+            movieData.removeObservers(this);
+        }
         movieData = movieViewModel.getMovieList();
         movieData.observe(this, new Observer<List<Movie>>() {
             @Override
@@ -117,19 +126,23 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onClick(Movie movie) {
-        Intent movieDetailIntent = new Intent(this,DetailActivity.class);
-        movieDetailIntent.putExtra("ID",movie.get_id());
+        Intent movieDetailIntent = new Intent(this, DetailActivity.class);
+        movieDetailIntent.putExtra("Movie", movie);
         startActivity(movieDetailIntent);
     }
 
     @Override
-    public void onFavoriteClick(boolean favorite, Movie movie) {
-        Intent addFavoriteIntent = new Intent(this,AddFavoriteTask.class);
-        addFavoriteIntent.putExtra("id",movie.get_id());
-        addFavoriteIntent.putExtra("favorite",favorite);
-        this.startService(addFavoriteIntent);
+    public void onFavoriteClick(final boolean favorite, final Movie movie) {
+        final Context context =this;
+        OurExecutors.getINSTANCE().getDbIO().execute(new Runnable() {
+            @Override
+            public void run() {
+                if(favorite) MoviesApi.addFavorite(context,movie);
+                else MoviesApi.removeFavorite(context,movie);
+                movie.setFavorite(favorite);
+            }
+        });
 
-        movie.setFavorite(favorite);
 
     }
 

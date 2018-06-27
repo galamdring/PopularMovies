@@ -109,7 +109,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="8dp"
                     android:layout_marginStart="8dp"
-                    android:text="Trailers:"
+                    android:text="@string/trailersLabel"
                     app:layout_constraintStart_toEndOf="@+id/iv_poster"
                     app:layout_constraintTop_toBottomOf="@+id/tv_rating" />
 
@@ -137,7 +137,7 @@
                     android:layout_marginLeft="8dp"
                     android:layout_marginStart="8dp"
                     android:layout_marginTop="8dp"
-                    android:text="Reviews:"
+                    android:text="@string/reviewsLabel"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/tv_overview" />
 
@@ -153,6 +153,16 @@
                     app:layout_constraintTop_toBottomOf="@id/reviewsLabel"
                     tools:layout_editor_absoluteY="371dp" />
 
+                <ImageView
+                    android:id="@+id/iv_detail_favorite"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp"
+                    app:layout_constraintStart_toStartOf="@+id/iv_poster"
+                    app:layout_constraintTop_toTopOf="@+id/iv_poster"
+                    app:srcCompat="@drawable/star_selector_toggle" />
             </android.support.constraint.ConstraintLayout>
         </ScrollView>
     </FrameLayout>

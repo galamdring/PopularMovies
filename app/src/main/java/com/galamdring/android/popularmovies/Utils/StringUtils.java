@@ -1,5 +1,6 @@
 package com.galamdring.android.popularmovies.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class StringUtils {
@@ -12,5 +13,13 @@ public class StringUtils {
             sb.append(element);
         }
         return sb.toString();
+    }
+
+    public static List<String> StringArrayToList(String[] source){
+        List<String> target = new ArrayList<>();
+        for(String item :source){
+            target.add(item);
+        }
+        return target;
     }
 }

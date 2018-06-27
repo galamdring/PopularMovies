@@ -16,7 +16,7 @@ public interface MovieDao {
     void insert(Movie movie);
 
     @Insert
-    long[] bulkInsert(List<Movie> movies);
+    void insert(List<Movie> movies);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     void update(Movie... movies);
@@ -36,4 +36,6 @@ public interface MovieDao {
     @Query("Delete From Movie")
     void deleteAll();
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void upsert(Movie movie);
 }

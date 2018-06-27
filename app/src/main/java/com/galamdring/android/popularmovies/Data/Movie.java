@@ -3,13 +3,17 @@ package com.galamdring.android.popularmovies.Data;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.PrimaryKey;
+import android.os.Parcel;
+import android.os.Parcelable;
 
+
+import com.galamdring.android.popularmovies.Utils.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-public class Movie {
+public class Movie implements Parcelable{
     private String title;
     private String posterUrl;
     @PrimaryKey
@@ -86,6 +90,62 @@ public class Movie {
         this.originalLang = originalLang;
         this.overview = overview;
     }
+
+    @Ignore
+    public Movie(Parcel source) {
+        title = source.readString();
+        posterUrl= source.readString();
+        _id= source.readInt();
+        voteCount= source.readInt();
+        releaseDate= source.readString();
+        voteAverage= source.readInt();
+        popularity= source.readDouble();
+        originalTitle= source.readString();
+        backdropUrl= source.readString();
+        genreIds= source.readString();
+        originalLang= source.readString();
+        overview= source.readString();
+        favorite= source.readByte()!=0;
+        trailerIds=new ArrayList<>();
+        source.readStringList(trailerIds);
+        reviews= source.createTypedArrayList(Review.CREATOR);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(title);
+        dest.writeString(posterUrl);
+        dest.writeInt(_id);
+        dest.writeInt(voteCount);
+        dest.writeString(releaseDate);
+        dest.writeInt(voteAverage);
+        dest.writeDouble(popularity);
+        dest.writeString(originalTitle);
+        dest.writeString(backdropUrl);
+        dest.writeString(genreIds);
+        dest.writeString(originalLang);
+        dest.writeString(overview);
+        dest.writeByte((byte)(favorite?1:0));
+        dest.writeStringList(trailerIds);
+        dest.writeTypedList(reviews);
+    }
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
+
+        @Override
+        public Movie createFromParcel(Parcel source) {
+            return new Movie(source);
+        }
+
+        @Override
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
 
     public String getPosterUrl() {
         return posterUrl;
@@ -206,4 +266,6 @@ public class Movie {
     public void setReviews(List<Review> reviews){
         this.reviews = reviews;
     }
+
+
 }

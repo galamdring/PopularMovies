@@ -15,4 +15,6 @@
 
     <string name="youtubeKey">youtubeKey</string>
     <string name="targetHolder">targetHolder</string>
+    <string name="trailersLabel">Trailers:</string>
+    <string name="reviewsLabel">Reviews:</string>
 </resources>

@@ -12,6 +12,7 @@ import com.galamdring.android.popularmovies.Data.FavoriteReview;
 import com.galamdring.android.popularmovies.Data.Genres;
 import com.galamdring.android.popularmovies.Data.Movie;
 import com.galamdring.android.popularmovies.Data.MovieDao;
+import com.galamdring.android.popularmovies.Data.OurExecutors;
 import com.galamdring.android.popularmovies.Data.Review;
 import com.galamdring.android.popularmovies.Data.MovieContract;
 import com.galamdring.android.popularmovies.Data.MovieDatabase;
@@ -36,28 +37,27 @@ public class MoviesApi {
     static final String TRAILER_URL="videos";
 
 
-    synchronized public static void addFavorite(Context context, int id){
-        MovieDatabase db = MovieDatabase.getInstance(context);
-        Toast.makeText(context, "Adding favorite flag to movie: "+id, Toast.LENGTH_SHORT).show();
-        Movie movie = db.movieDao().getMovie(id).getValue();
+    synchronized public static void addFavorite(Context context, Movie movie){
         if(movie!=null) {
+            MovieDatabase db = MovieDatabase.getInstance(context);
             movie.setFavorite(true);
-            movie.setReviews(db.reviewDao().getMovieReviews(id).getValue());
+            db.movieDao().upsert(movie);
+            movie.setReviews(db.reviewDao().getMovieReviews(movie.get_id()).getValue());
             Favorite favorite = new Favorite(movie);
             db.favoriteDao().insertWithReviews(favorite, FavoriteReview.FavoriteReviewListFromListReview(movie.getReviews()));
         }
         else{Log.d("addFavoriteMovieApi","Couldn't load movie.");}
     }
 
-    public static void removeFavorite(Context context, int id) {
-        Toast.makeText(context, "Removing favorite flag from movie: "+id, Toast.LENGTH_SHORT).show();
-        MovieDatabase db = MovieDatabase.getInstance(context);
-        Movie movie = db.movieDao().getMovie(id).getValue();
+    public static void removeFavorite(Context context, Movie movie)
+    {
         if(movie!=null) {
+            MovieDatabase db = MovieDatabase.getInstance(context);
+            //Toast.makeText(context, "Removing favorite flag from movie: "+movie.get_id(), Toast.LENGTH_SHORT).show();
             movie.setFavorite(false);
-            db.movieDao().update(movie);
-            Favorite favorite = db.favoriteDao().getFavorite(id);
-            List<FavoriteReview> reviews = db.favoriteDao().getFavoriteReviews(id).getValue();
+            db.movieDao().upsert(movie);
+            Favorite favorite = db.favoriteDao().getFavorite(movie.get_id());
+            List<FavoriteReview> reviews = db.favoriteDao().getFavoriteReviews(movie.get_id()).getValue();
             if(reviews!=null){
                 db.favoriteDao().delete(reviews);
             }
@@ -67,26 +67,32 @@ public class MoviesApi {
         }
     }
 
-    synchronized public static void syncMovies(Context context, String sortType){
-        try {
-            ArrayList<Movie> movieValues = getMovieContextValues(context, sortType);
-            if (movieValues != null && movieValues.size() != 0) {
-                MovieDatabase database = MovieDatabase.getInstance(context);
-                MovieDao mdao = database.movieDao();
-                ReviewDao rdao = database.reviewDao();
-                mdao.deleteAll();
-                rdao.deleteAll();
-                for(Movie movie :movieValues){
-                    rdao.insert(movie.getReviews());
+    public static void syncMovies(final Context context, String sortType) {
+        final ArrayList<Movie> movieValues = getMovieContextValues(context, sortType);
+        if (movieValues != null && movieValues.size() != 0) {
+            OurExecutors.getINSTANCE().getDbIO().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        MovieDatabase database = MovieDatabase.getInstance(context);
+                        MovieDao mdao = database.movieDao();
+                        mdao.deleteAll();
+                        List<Integer> favoriteIds = database.favoriteDao().getFavoriteIds().getValue();
+                        ReviewDao rdao = database.reviewDao();
+                        rdao.deleteAll();
+                        for (Movie movie : movieValues) {
+                            if(favoriteIds!= null && favoriteIds.contains(movie.get_id())) movie.setFavorite(true);
+                            mdao.upsert(movie);
+                            rdao.insert(movie.getReviews());
+                        }
+                    } catch (Exception e) {
+                        Log.e("syncMovies", "Failed to load movies from tmdb", e);
+                    }
                 }
-                long[] ids = mdao.bulkInsert(movieValues);
-                Log.d("MoviesApi","inserted "+ids.length+" movies.");
-            }
-        }
-        catch(Exception e){
-            Log.e("syncMovies","Failed to load movies from tmdb",e);
+            });
         }
     }
+
     public static ArrayList<Movie> getMovieContextValues(Context context, String sortType){
 
         API_KEY=context.getResources().getString(R.string.apiKey);
