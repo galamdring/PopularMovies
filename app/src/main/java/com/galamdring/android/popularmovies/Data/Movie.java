@@ -1,5 +1,6 @@
 package com.galamdring.android.popularmovies.Data;
 
+import android.app.Application;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.PrimaryKey;

@@ -26,4 +26,13 @@ public class FavoriteReview extends Review{
         }
         return favoriteReviews;
     }
+
+    public static List<Review> ReviewListFromListFavoriteReviews(List<FavoriteReview> reviews){
+        List<Review> target = new ArrayList<>();
+        if(reviews == null) return target;
+        for(FavoriteReview review : reviews){
+            target.add(new Review(review));
+        }
+        return target;
+    }
 }

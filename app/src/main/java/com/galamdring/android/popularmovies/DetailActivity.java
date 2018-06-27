@@ -7,29 +7,22 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
-import android.database.Cursor;
 import android.databinding.DataBindingUtil;
-import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.LoaderManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.galamdring.android.popularmovies.Data.FavoriteReview;
 import com.galamdring.android.popularmovies.Data.Movie;
-import com.galamdring.android.popularmovies.Data.MovieContract;
-import com.galamdring.android.popularmovies.Data.MovieProvider;
+import com.galamdring.android.popularmovies.Data.MovieDatabase;
 import com.galamdring.android.popularmovies.Data.MovieViewModel;
 import com.galamdring.android.popularmovies.Data.OurExecutors;
 import com.galamdring.android.popularmovies.Data.Review;
@@ -45,8 +38,9 @@ public class DetailActivity extends AppCompatActivity {
     private ActivityDetailBinding detailBinding;
     private ReviewsAdapter reviewsAdapter;
     private TrailerAdapter trailerAdapter;
-    private Movie TheMovie;
+    private LiveData<Movie> TheMovie;
     private Context context =this;
+    private MovieViewModel movieViewModel;
 
 
     @Override
@@ -55,8 +49,15 @@ public class DetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_detail);
 
         detailBinding = DataBindingUtil.setContentView(this, R.layout.activity_detail);
-        TheMovie = getIntent().getParcelableExtra("Movie");
-
+        Movie movie = getIntent().getParcelableExtra("Movie");
+        movieViewModel = ViewModelProviders.of(this).get(MovieViewModel.class);
+        TheMovie = movieViewModel.getMovieById(movie.get_id());
+        TheMovie.observe(this, new Observer<Movie>() {
+            @Override
+            public void onChanged(@Nullable Movie movie) {
+                PopulateUI(movie);
+            }
+        });
 
 
         detailBinding.rvReviews.setLayoutManager(new LinearLayoutManager(this));
@@ -69,7 +70,7 @@ public class DetailActivity extends AppCompatActivity {
 
         if (TheMovie == null)
             Toast.makeText(this, "Couldn't get data. Please try again.", Toast.LENGTH_SHORT).show();
-        PopulateUI(TheMovie);
+
 
 
 
@@ -86,7 +87,25 @@ public class DetailActivity extends AppCompatActivity {
         final FrameLayout layout = findViewById(R.id.detailbackground);
         detailBinding.tvOverview.setText(movie.getOverview());
         trailerAdapter.setData(movie.getTrailerIds());
-        reviewsAdapter.setData(movie.getReviews());
+        if(movie.isFavorite()){
+            movieViewModel.getFavoriteReviews(movie.get_id()).observe(this, new Observer<List<FavoriteReview>>() {
+                @Override
+                public void onChanged(@Nullable List<FavoriteReview> favoriteReviews) {
+                    reviewsAdapter.setData(FavoriteReview.ReviewListFromListFavoriteReviews(favoriteReviews));
+                }
+            });
+
+        }
+        else{
+            movieViewModel.getReviewsForMovie(movie.get_id()).observe(this, new Observer<List<Review>>() {
+                @Override
+                public void onChanged(@Nullable List<Review> reviews) {
+                    reviewsAdapter.setData(reviews);
+                }
+            });
+        }
+
+
 
         detailBinding.ivDetailFavorite.setActivated(movie.isFavorite());
         detailBinding.ivDetailFavorite.setOnClickListener(new View.OnClickListener() {
@@ -96,8 +115,8 @@ public class DetailActivity extends AppCompatActivity {
                     OurExecutors.getINSTANCE().getDbIO().execute(new Runnable() {
                         @Override
                         public void run() {
-                            MoviesApi.removeFavorite(context,TheMovie);
-                            TheMovie.setFavorite(false);
+                            MoviesApi.removeFavorite(context,movie);
+                            movie.setFavorite(false);
                         }
                     });
                 }
@@ -105,8 +124,8 @@ public class DetailActivity extends AppCompatActivity {
                     OurExecutors.getINSTANCE().getDbIO().execute(new Runnable() {
                         @Override
                         public void run() {
-                            MoviesApi.addFavorite(context,TheMovie);
-                            TheMovie.setFavorite(true);
+                            MoviesApi.addFavorite(context,movie);
+                            movie.setFavorite(true);
                         }
                     });
                 }

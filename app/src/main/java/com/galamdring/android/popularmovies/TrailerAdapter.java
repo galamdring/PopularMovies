@@ -1,7 +1,6 @@
 package com.galamdring.android.popularmovies;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.NonNull;
@@ -13,7 +12,6 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.galamdring.android.popularmovies.Data.MovieContract;
 import com.galamdring.android.popularmovies.Utils.BitmapUtils;
 import com.galamdring.android.popularmovies.Utils.TrailerUtils;
 import com.squareup.picasso.Picasso;

@@ -5,7 +5,6 @@ import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -20,12 +19,9 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 
 import com.galamdring.android.popularmovies.Data.Favorite;
-import com.galamdring.android.popularmovies.Data.FavoriteReview;
 import com.galamdring.android.popularmovies.Data.Movie;
-import com.galamdring.android.popularmovies.Data.MovieContract;
 import com.galamdring.android.popularmovies.Data.MovieViewModel;
 import com.galamdring.android.popularmovies.Data.OurExecutors;
-import com.galamdring.android.popularmovies.Sync.MovieSyncTask;
 import com.galamdring.android.popularmovies.Sync.MoviesApi;
 
 import java.util.List;
@@ -39,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements
     private ProgressBar loadingIndicator;
     private final int LoaderId = 3145;
     private MovieViewModel movieViewModel;
-    private Uri moviesUri = MovieContract.MovieEntry.MOVIES_CONTENT_URI;
     private LiveData<List<Movie>> movieData;
     private LiveData<List<Favorite>> favoriteData;
 
@@ -88,26 +83,20 @@ public class MainActivity extends AppCompatActivity implements
 
 
     private void syncHighRated() {
-        Intent intentToStartSync = new Intent(this, MovieSyncTask.class);
-        intentToStartSync.setAction("top_rated");
-        this.startService(intentToStartSync);
-        movieData.removeObservers(this);
-        movieData = movieViewModel.getMovieList();
-        movieData.observe(this, new Observer<List<Movie>>() {
-            @Override
-            public void onChanged(@Nullable List<Movie> movies) {
-                moviesAdapter.setData(movies);
-            }
-        });
+        syncMovies("top_rated");
     }
 
     private void syncPopular() {
+        syncMovies("popular");
+    }
+
+    private void syncMovies(final String sortType){
         final Context context = this;
         moviesAdapter.setData(null);
         OurExecutors.getINSTANCE().getNetworkIO().execute(new Runnable() {
             @Override
             public void run() {
-                MoviesApi.syncMovies(context, "popular");
+                MoviesApi.syncMovies(context, sortType);
             }
         });
         if (movieData != null && movieData.hasObservers()) {
@@ -121,7 +110,6 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
     }
-
     public void startSync(){syncPopular();}
 
     @Override
@@ -163,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void loadFavorites() {
-        //TODO: Load the movies that are flagged as favorites
+        // Completed TODO: Load the movies that are flagged as favorites
         movieData.removeObservers(this);
         movieData = movieViewModel.getFavorites();
         movieData.observe(this, new Observer<List<Movie>>() {

@@ -26,18 +26,7 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
-        <provider
-            android:authorities="com.galamdring.android.popularmovies"
-            android:name=".Data.MovieProvider"
-            android:exported="false" />
-        <service android:name=".Sync.MovieSyncTask"
-            android:exported="false"/>
-        <service android:name=".Sync.AddFavoriteTask"
-            android:exported="false"/>
-        <service android:name=".Sync.TrailerSyncTask"
-            android:exported="false"/>
-        <service android:name=".Sync.ReviewSyncTask"
-            android:exported="false"/>
+
     </application>
 
 </manifest>

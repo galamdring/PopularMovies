@@ -1,18 +1,14 @@
 package com.galamdring.android.popularmovies;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.galamdring.android.popularmovies.Data.Movie;
-import com.galamdring.android.popularmovies.Data.MovieContract;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
@@ -50,6 +46,7 @@ class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesViewHolder>
     public void setData(List<Movie> movies) {
         this.TheMovies = movies;
         notifyDataSetChanged();
+
     }
 
     public interface MoviesAdapterOnClickHandler{

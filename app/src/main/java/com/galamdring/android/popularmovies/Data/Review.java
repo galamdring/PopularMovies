@@ -35,6 +35,14 @@ public class Review implements Parcelable{
         reviewUrl=source.readString();
     }
 
+    Review(FavoriteReview review) {
+        id=review.getId();
+        author = review.getAuthor();
+        content = review.getContent();
+        movieId = review.getMovieId();
+        reviewUrl = review.getReviewUrl();
+    }
+
     public String getId() {
         return id;
     }

@@ -1,7 +1,5 @@
 package com.galamdring.android.popularmovies.Sync;
 
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
@@ -14,7 +12,6 @@ import com.galamdring.android.popularmovies.Data.Movie;
 import com.galamdring.android.popularmovies.Data.MovieDao;
 import com.galamdring.android.popularmovies.Data.OurExecutors;
 import com.galamdring.android.popularmovies.Data.Review;
-import com.galamdring.android.popularmovies.Data.MovieContract;
 import com.galamdring.android.popularmovies.Data.MovieDatabase;
 import com.galamdring.android.popularmovies.Data.ReviewDao;
 import com.galamdring.android.popularmovies.R;
@@ -134,8 +131,9 @@ public class MoviesApi {
                 String title = result.getString("title");
 
                 ArrayList<String> trailerIds = PopulateTrailers(id);
-                Log.d(MoviesApi.class.getSimpleName(),String.format("Got %s as trailer ids.", StringUtils.ListToStringJoin(trailerIds,", ")));
+                //Log.d(MoviesApi.class.getSimpleName(),String.format("Got %s as trailer ids.", StringUtils.ListToStringJoin(trailerIds,", ")));
                 List<Review> reviews = PopulateReviews(id);
+                Log.d(MoviesApi.class.getSimpleName(), "Got "+reviews.size()+" reviews for " + title);
 
                 Movie movie = new Movie(title,posterUrl,id,voteCount,relDate,voteAvg,popularity,orig_title,backdropUrl,genreSB.toString(),originalLang,overview,trailerIds);
                 movie.setReviews(reviews);
