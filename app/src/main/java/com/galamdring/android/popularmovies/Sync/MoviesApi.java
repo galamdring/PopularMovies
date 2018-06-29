@@ -3,7 +3,6 @@ package com.galamdring.android.popularmovies.Sync;
 import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.galamdring.android.popularmovies.Data.Favorite;
 import com.galamdring.android.popularmovies.Data.FavoriteReview;
@@ -16,7 +15,6 @@ import com.galamdring.android.popularmovies.Data.MovieDatabase;
 import com.galamdring.android.popularmovies.Data.ReviewDao;
 import com.galamdring.android.popularmovies.R;
 import com.galamdring.android.popularmovies.Utils.JSONUtils;
-import com.galamdring.android.popularmovies.Utils.StringUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -142,11 +140,12 @@ public class MoviesApi {
             return movies;
         }
         catch(IOException ex){
-            Toast.makeText(context, "Looks like we can't connect. Is your network on?", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(context, "Looks like we can't connect. Is your network on?", Toast.LENGTH_SHORT).show();
             Log.d("MoviesApi","Failed loading movie data.",ex);
         }
         catch(JSONException ex) {
-            Toast.makeText(context, "Failed to parse TMDB api response. Please contact the developer.", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(context, "Failed to parse TMDB api response. Please contact the developer.", Toast.LENGTH_SHORT).show();
+            Log.e("MoviesApi", "Failed to parse TMDB response.");
         }
 
         return null;
