@@ -6,6 +6,7 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -29,6 +30,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements
         MoviesAdapter.MoviesAdapterOnClickHandler,
         AdapterView.OnItemSelectedListener{
+    private static final String KEY_FOR_LAYOUT_STATE = "LAYOUT_KEY_STATE_KEY";
     private RecyclerView moviesRecyclerView;
     private MoviesAdapter moviesAdapter;
     private RecyclerView.LayoutManager moviesLayoutManager;
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements
     private MovieViewModel movieViewModel;
     private LiveData<List<Movie>> movieData;
     private LiveData<List<Favorite>> favoriteData;
+    Parcelable layoutState;
 
 
     @Override
@@ -47,6 +50,11 @@ public class MainActivity extends AppCompatActivity implements
         moviesRecyclerView.setHasFixedSize(true);
 
         moviesLayoutManager = new GridLayoutManager(this,2);
+        if(savedInstanceState!=null){
+
+            layoutState = savedInstanceState.getParcelable(KEY_FOR_LAYOUT_STATE);
+
+        }
         moviesRecyclerView.setLayoutManager(moviesLayoutManager);
 
         loadingIndicator = findViewById(R.id.progress_bar);
@@ -62,8 +70,25 @@ public class MainActivity extends AppCompatActivity implements
         movieViewModel = ViewModelProviders.of(this).get(MovieViewModel.class);
 
 
+
         moviesRecyclerView.setAdapter(moviesAdapter);
-        startSync();
+
+        try {
+            movieData = movieViewModel.getMovieList();
+            if (movieData!= null && movieData.getValue().size() > 0) {
+                movieData.observe(this, new Observer<List<Movie>>() {
+                    @Override
+                    public void onChanged(@Nullable List<Movie> movies) {
+                        moviesAdapter.setData(movies);
+                        if(layoutState!=null){
+                            moviesLayoutManager.onRestoreInstanceState(layoutState);
+                        }
+                    }
+                });
+            }
+            else{startSync();}
+        }
+        catch(Exception e) {}
 
 
 
@@ -107,6 +132,9 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onChanged(@Nullable List<Movie> movies) {
                 moviesAdapter.setData(movies);
+                if(layoutState!=null){
+                    moviesLayoutManager.onRestoreInstanceState(layoutState);
+                }
             }
         });
     }
@@ -165,5 +193,12 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onNothingSelected(AdapterView<?> parent) {
         syncPopular();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Parcelable layoutState = moviesLayoutManager.onSaveInstanceState();
+        outState.putParcelable(KEY_FOR_LAYOUT_STATE, layoutState);
     }
 }
